@@ -47,26 +47,19 @@ def exe(sql):
 def don():
     return
 
-# htm = """
-#         <td>2018-06-23 00:10:54</td>&#13;
-#         <td> 20180623002 </td>&#13;
-#         <td>&#13;
-#         <span title="1" class="  ball_s_ ball_s_blue ball_lenght5  ">1</span>&#13;
-#         <span title="1" class="  ball_s_ ball_s_blue ball_lenght5  ">1</span>&#13;
-#         <span title="5" class="  ball_s_ ball_s_blue ball_lenght5  ">5</span>&#13;
-#         <span title="1" class="  ball_s_ ball_s_blue ball_lenght5  ">1</span>&#13;
-#         <span title="7" class="  ball_s_ ball_s_blue ball_lenght5  ">7</span>&#13;
-#         </td>&#13;
-#         <td class="count">15</td>&#13;
-#         <td class="gray">单</td>&#13;
-#         <td class="gray">小</td>&#13;
-#         <td class="gray">虎</td>&#13;
-# """
+htm = """
+                <td>2018-06-24 16:45:08</td>
+                <td> 895187 </td>
+                <td><span class="  ball_s_ ball_s_blue ball_lenght5  ">1</span><span class="ball_s_">+</span><span class="  ball_s_ ball_s_blue ball_lenght5  ">9</span><span class="ball_s_">+</span><span class="  ball_s_ ball_s_blue ball_lenght5  ">3</span></td>
 
-# def testHtml():
-#     doc = pq(htm) 
-#     balls = doc('.ball_s_')
-#     print(pq(balls[0]).parent().prev().text())
+"""
+
+def testHtml():
+    doc = pq(htm) 
+    balls = doc('.ball_s_')
+    #print(balls)
+    print(pq(balls[0]).text())
+    print(pq(balls[0]).parent().prev().text())
 
 def getAttrByCid(cid='204'):
     lottype_idx = LOT_TYPE['index'].index(cid)
@@ -76,12 +69,15 @@ def getAttrByCid(cid='204'):
 
     return [name,bit,css_class]
 
-LOT_TYPE = {'index':['204','9','26','34','44'],'attr':[ ['幸运飞艇',10,'.ball_pks_'],['北京pk10',10,'.ball_pks_'],['重庆时时彩',5,'.ball_s_'],['广东快乐十分',8,'.ball_s_'],['重庆幸运农场',8,'.ball_nc_'] ] }  #id,彩种名称,位数
+LOT_TYPE = {'index':['204','9','26','238','34','44'],'attr':[ 
+                    ['幸运飞艇',10,'.ball_lenght10'],['北京pk10',10,'.ball_lenght10'],
+                    ['重庆时时彩',5,'.ball_lenght5'],['幸运28',3,'.ball_lenght5'],
+                    ['广东快乐十分',8,'.ball_lenght8'],['重庆幸运农场',8,'.ball_nc_'] ] }  #id,彩种名称,位数
 
 #获取历史数据（默认当日）
 def getlot(day=dt.datetime.now().strftime('%Y-%m-%d'),cid='204'):
     url = LOT_URL.format(cid,day)
-    resp = requests.get(url,headers=HEADERS,timeout=(10,60))  #10次，每次60秒
+    resp = requests.get(url,headers=HEADERS,timeout=(10,120))  #10次，每次60秒
     #print(url)
     attrs = getAttrByCid(cid)
     name = attrs[0] #彩种名称
@@ -96,31 +92,34 @@ def getlot(day=dt.datetime.now().strftime('%Y-%m-%d'),cid='204'):
     arrXD = []
     periods = int(len(balls)/bit)  #周期数量
     #print(name,url)
+    print(cid,'周期数：',periods)
     for i in range(periods):
-        qs = pq(balls[i*bit]).parent().parent().prev().text() if bit==10 else pq(balls[i*bit]).parent().prev().text()
-        dt = pq(balls[i*bit]).parent().parent().prev().prev().text() if bit==10 else pq(balls[i*bit]).parent().prev().prev().text()
-        #print('qs:',qs,'dt',dt,'end')
-        a = [qs,cid,dt,periods-i]  #期数/cid/开奖时间／场次／
-        d = []
-        x = []
-        for j in range(bit):
-            s1 = pq(balls[i*bit+j]).attr('title')
-            s2 = str(int(s1)%2)
-            s3 = '0' if int(s1)<6 else '1'
-            #print(s1,s2,s3)
-            a.append(s1)
-            d.append(s2)
-            x.append(s3)
-        arr.append(a)
-        arrDX.append(d)
-        arrXD.append(x)
+        qs = pq(balls[i*bit]).parent().parent().prev().text() if bit==10 or bit==8 else pq(balls[i*bit]).parent().prev().text()
+        #print(type(qs))
+        if not qs=='':
+            dt = pq(balls[i*bit]).parent().parent().prev().prev().text() if bit==10 else pq(balls[i*bit]).parent().prev().prev().text()
+            #print('qs:',qs,'dt',dt,'end')
+            a = [qs,cid,dt,periods-i]  #期数/cid/开奖时间／场次／
+            d = []
+            x = []
+            for j in range(bit):
+                s1 = pq(balls[i*bit+j]).attr('title') if not bit==3 else pq(balls[i*bit+j]).text()
+                s2 = str(int(s1)%2)
+                s3 = '0' if int(s1)<6 else '1'
+                #print(s1,s2,s3)
+                a.append(s1)
+                d.append(s2)
+                x.append(s3)
+            arr.append(a)
+            arrDX.append(d)
+            arrXD.append(x)
         
     return {'arr':arr,'arrDX':arrDX,'arrXD':arrXD}
 
 #写入历史数据
 def putlot(start=None,offset=360,cid='204',flag='append'):
     try:
-        print(cid,start)
+        #print(cid,start)
         s = dt.datetime.strptime(start,("%Y-%m-%d")) if not start==None else dt.datetime.now()
         dd = []
 
@@ -174,7 +173,7 @@ def putlot(start=None,offset=360,cid='204',flag='append'):
             print('complete percent:%10.8s%s'%(str(round(percent,2)),'%'),end='\r') 
             time.sleep(0.1) 
     except Exception as e:
-        print(start,cid,error)
+        print('error',start,cid,e)
 
 def putAll(start=None,offset=100):
     for cid in LOT_TYPE['index']:
@@ -244,6 +243,10 @@ def analy(a=0,cid=26):
 
     return {'单双':arr} if a==0 else {'大小':arr2}
 
+def analy2(cid=None):
+    #策略/彩种/类型(dx or xd)/最大番数/轮数频次1~20/位数频次1~10
+    return
+
 #获取期数信息
 def getQsInfo(cid='26',idx=0,date=dt.datetime.now().strftime('%Y-%m-%d')):
     sql = """
@@ -256,7 +259,7 @@ def getQsInfo(cid='26',idx=0,date=dt.datetime.now().strftime('%Y-%m-%d')):
     return(d)
 
 #策略
-st = {'trade':['0000001:0','1111110:1'],'balance':400000,'bet':2,'case':'00000000111111100000000111111101110101','rate':2,'notEnough':'stop'}
+st = {'trade':['00000001:0','11111110:1'],'balance':50000,'bet':2,'case':'00000000111111100000000111111101110101','rate':2,'notEnough':'stop'}
 
 #模拟操作
 def mony(strategy=None,flag='双单',flagNo=None):
@@ -292,32 +295,15 @@ def mony(strategy=None,flag='双单',flagNo=None):
                         if cost > strategy['balance'] : #当成本超出策略额度时
                             print('  ╳第{0}轮Boom,你需要至少{1},当前额度只有{2}'.format(i+1,cost,strategy['balance']))
                         cost = sum(bets)
-                        #print(cost)
-                        #print('下一注：',bet,'成本：',cost)
-                        # b = balance - bet
-                        # strategy['balance'] = b
-                        # #print(s,'kui',kui,'=',balance,'-',b)
-                        # if bet>b:  #当余额不足以支付下一注金额时
-                        #     strategy['balance'] = 0
-                        #     print('✕第{0}轮下注：'.format(i+2),b,'，Boom,爆仓了!!!你的余额仅有 :',0,',而你最好要有 :' ,bet*2,'\r\n' )
-                        #     bet = strategy['bet']
-                        #     break
                       
                     else :                  #当符合中奖点时
-                        # bet += int(bet*rate)
-                        # bingo = int(balance-bet)
-                        # print('√第{0}轮下注'.format(i+1),bet,'Bingo！！！本期赚了: {1},余额为{0}'.format(balance,bingo) , ',本次开销：',bet*2,'\r\n')
-                        # bet = strategy['bet']
-                        # strategy['balance'] = balance
-                        #判断余额是否够下一注
                         bet = bet if strategy['balance'] > bet else strategy['balance']
                         strategy['balance'] = (strategy['balance'] if strategy['balance'] > bet else 0) - bet + bet*rate
                         # if strategy['balance'] > bet:
                         #     cost 
-                        print('√第{0}轮下注{1}元;余额:{2}'.format(i+1,bet,strategy['balance']),'成本：',cost)#b,kui,b-kui,bet,
+                        print('√第{0}轮Bingo:下注{1}元;余额:{2}'.format(i+1,bet,strategy['balance']),'成本：',cost)#b,kui,b-kui,bet,
                         bets.append(sum(bets)*rate)
                         break
-
 
 def globalmony(cid='26'):
     attr = getAttrByCid(cid)
@@ -362,59 +348,66 @@ sched = BlockingScheduler()
 
 #每n秒执行
 @sched.scheduled_job('interval', max_instances=1,id='listen_job', seconds=120) 
-def listen(cid='26'):
-    # try:
-        d = getlot() if cid==None else getlot(cid)
+def listen(cid=None):
+    #try:
+        arr = [cid] if not cid==None else LOT_TYPE['index']
 
-        dx1  =  ''.join([x[0] for x in d['arrDX'][::-1]])
-        dx2  =  ''.join([x[1] for x in d['arrDX'][::-1]])
-        dx3  =  ''.join([x[2] for x in d['arrDX'][::-1]])
-        dx4  =  ''.join([x[3] for x in d['arrDX'][::-1]])
-        dx5  =  ''.join([x[4] for x in d['arrDX'][::-1]])
-        dx6  =  ''.join([x[5] for x in d['arrDX'][::-1]])
-        dx7  =  ''.join([x[6] for x in d['arrDX'][::-1]])
-        dx8  =  ''.join([x[7] for x in d['arrDX'][::-1]])
-        dx9  =  ''.join([x[8] for x in d['arrDX'][::-1]])
-        dx10 =  ''.join([x[9] for x in d['arrDX'][::-1]])
+        #print(arr)
+        for id in arr:
+            d = getlot(cid=id)
+            attr = getAttrByCid(id)
+            bit = attr[1]
 
-        xd1  =  ''.join([x[0] for x in d['arrXD'][::-1]])
-        xd2  =  ''.join([x[1] for x in d['arrXD'][::-1]])
-        xd3  =  ''.join([x[2] for x in d['arrXD'][::-1]])
-        xd4  =  ''.join([x[3] for x in d['arrXD'][::-1]])
-        xd5  =  ''.join([x[4] for x in d['arrXD'][::-1]])
-        xd6  =  ''.join([x[5] for x in d['arrXD'][::-1]])
-        xd7  =  ''.join([x[6] for x in d['arrXD'][::-1]])
-        xd8  =  ''.join([x[7] for x in d['arrXD'][::-1]])
-        xd9  =  ''.join([x[8] for x in d['arrXD'][::-1]])
-        xd10 =  ''.join([x[9] for x in d['arrXD'][::-1]])
+            dx1  =  ''.join([x[0] for x in d['arrDX'][::-1]]) if bit>0 else ''
+            dx2  =  ''.join([x[1] for x in d['arrDX'][::-1]]) if bit>1 else ''
+            dx3  =  ''.join([x[2] for x in d['arrDX'][::-1]]) if bit>2 else ''
+            dx4  =  ''.join([x[3] for x in d['arrDX'][::-1]]) if bit>3 else ''
+            dx5  =  ''.join([x[4] for x in d['arrDX'][::-1]]) if bit>4 else ''
+            dx6  =  ''.join([x[5] for x in d['arrDX'][::-1]]) if bit>5 else ''
+            dx7  =  ''.join([x[6] for x in d['arrDX'][::-1]]) if bit>6 else ''
+            dx8  =  ''.join([x[7] for x in d['arrDX'][::-1]]) if bit>7 else ''
+            dx9  =  ''.join([x[8] for x in d['arrDX'][::-1]]) if bit>8 else ''
+            dx10 =  ''.join([x[9] for x in d['arrDX'][::-1]]) if bit>9 else ''
 
-        for w in st['trade']:
-            f = w.split(':')[0]
-            l = len(f)
-            sendMsg(cid + '>奇偶1 :' + f) if f==dx1  [-l:] else don()
-            sendMsg(cid + '>奇偶2 :' + f) if f==dx2  [-l:] else don()
-            sendMsg(cid + '>奇偶3 :' + f) if f==dx3  [-l:] else don()
-            sendMsg(cid + '>奇偶4 :' + f) if f==dx4  [-l:] else don()
-            sendMsg(cid + '>奇偶5 :' + f) if f==dx5  [-l:] else don()
-            sendMsg(cid + '>奇偶6 :' + f) if f==dx6  [-l:] else don()
-            sendMsg(cid + '>奇偶7 :' + f) if f==dx7  [-l:] else don()
-            sendMsg(cid + '>奇偶8 :' + f) if f==dx8  [-l:] else don()
-            sendMsg(cid + '>奇偶9 :' + f) if f==dx9  [-l:] else don()
-            sendMsg(cid + '>奇偶10:' + f) if f==dx10 [-l:] else don()
+            xd1  =  ''.join([x[0] for x in d['arrXD'][::-1]]) if bit>0 else ''
+            xd2  =  ''.join([x[1] for x in d['arrXD'][::-1]]) if bit>1 else ''
+            xd3  =  ''.join([x[2] for x in d['arrXD'][::-1]]) if bit>2 else ''
+            xd4  =  ''.join([x[3] for x in d['arrXD'][::-1]]) if bit>3 else ''
+            xd5  =  ''.join([x[4] for x in d['arrXD'][::-1]]) if bit>4 else ''
+            xd6  =  ''.join([x[5] for x in d['arrXD'][::-1]]) if bit>5 else ''
+            xd7  =  ''.join([x[6] for x in d['arrXD'][::-1]]) if bit>6 else ''
+            xd8  =  ''.join([x[7] for x in d['arrXD'][::-1]]) if bit>7 else ''
+            xd9  =  ''.join([x[8] for x in d['arrXD'][::-1]]) if bit>8 else ''
+            xd10 =  ''.join([x[9] for x in d['arrXD'][::-1]]) if bit>9 else ''
 
-            sendMsg(cid + '>大小1 :' + f ) if f==xd1 [-l:] else don()
-            sendMsg(cid + '>大小2 :' + f ) if f==xd2 [-l:] else don()
-            sendMsg(cid + '>大小3 :' + f ) if f==xd3 [-l:] else don()
-            sendMsg(cid + '>大小4 :' + f ) if f==xd4 [-l:] else don()
-            sendMsg(cid + '>大小5 :' + f ) if f==xd5 [-l:] else don()
-            sendMsg(cid + '>大小6 :' + f ) if f==xd6 [-l:] else don()
-            sendMsg(cid + '>大小7 :' + f ) if f==xd7 [-l:] else don()
-            sendMsg(cid + '>大小8 :' + f ) if f==xd8 [-l:] else don()
-            sendMsg(cid + '>大小9 :' + f ) if f==xd9 [-l:] else don()
-            sendMsg(cid + '>大小10:' + f ) if f==xd10[-l:] else don()
+            for w in st['trade']:
+                f = w.split(':')[0]
+                l = len(f)
+                now = dt.datetime.now().strftime('%Y-%m-%d %H:%M')
+                sendMsg('{3}:{0}({2})--单双1 :命中{1}'.format(attr[0],f,id,now)) if f==dx1  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双2 :命中{1}'.format(attr[0],f,id,now)) if f==dx2  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双3 :命中{1}'.format(attr[0],f,id,now)) if f==dx3  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双4 :命中{1}'.format(attr[0],f,id,now)) if f==dx4  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双5 :命中{1}'.format(attr[0],f,id,now)) if f==dx5  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双6 :命中{1}'.format(attr[0],f,id,now)) if f==dx6  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双7 :命中{1}'.format(attr[0],f,id,now)) if f==dx7  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双8 :命中{1}'.format(attr[0],f,id,now)) if f==dx8  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双9 :命中{1}'.format(attr[0],f,id,now)) if f==dx9  [-l:] else don()
+                sendMsg('{3}:{0}({2})--单双10:命中{1}'.format(attr[0],f,id,now)) if f==dx10 [-l:] else don()
 
-    # except Exception as e:
-    #     sched.shutdown()
+                sendMsg('{3}:{0}({2})--大小1 :命中{1}'.format(attr[0],f,id,now) ) if f==xd1 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小2 :命中{1}'.format(attr[0],f,id,now) ) if f==xd2 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小3 :命中{1}'.format(attr[0],f,id,now) ) if f==xd3 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小4 :命中{1}'.format(attr[0],f,id,now) ) if f==xd4 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小5 :命中{1}'.format(attr[0],f,id,now) ) if f==xd5 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小6 :命中{1}'.format(attr[0],f,id,now) ) if f==xd6 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小7 :命中{1}'.format(attr[0],f,id,now) ) if f==xd7 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小8 :命中{1}'.format(attr[0],f,id,now) ) if f==xd8 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小9 :命中{1}'.format(attr[0],f,id,now) ) if f==xd9 [-l:] else don()
+                sendMsg('{3}:{0}({2})--大小10:命中{1}'.format(attr[0],f,id,now) ) if f==xd10[-l:] else don()
+
+    #except Exception as e:
+    #    sched.shutdown()
 
 def days_diff(str1,str2):
     date1=datetime.datetime.strptime(str1[0:10],"%Y-%m-%d")
@@ -424,39 +417,43 @@ def days_diff(str1,str2):
 
 #补全数据
 @sched.scheduled_job('cron', id='job_completData', hour='12')
-def completData():
+def completData(cid='204'):
     now = dt.datetime.now()
-    sql = 'select date from lot2 order by date desc limit 1'
+    sql = "select date from lot2 where cid='{0}' order by date desc limit 1".format(cid)
     newest = query(sql)[0][0].strftime('%Y-%m-%d')
     diff = (now - dt.datetime.strptime(newest,("%Y-%m-%d"))).days - 1
     yesterday = (now - dt.timedelta(days=1)).strftime('%Y-%m-%d')
     print(newest,yesterday,diff)
 
-    putlot(yesterday,diff)
+    putlot(yesterday,diff,cid=cid)
+
+def completAll():
+    for cid in LOT_TYPE['index']:
+        completData(cid)
 
 import sys  
 if __name__ == '__main__':
     if len(sys.argv) > 1 :
         if sys.argv[1] == "get":
-            print(getlot('2018-06-20') if len(sys.argv)<3  else getlot(sys.argv[2]))
+            print(getlot('2018-06-20') if len(sys.argv)<3  else getlot('2018-06-20',cid=sys.argv[2]))
         if sys.argv[1] == "analy":
             print(analy(),analy(1))
         if sys.argv[1] == 'mony':
-            mony()
+            mony() if len(sys.argv)<3 else mony(cid=sys.argv[2])
         if sys.argv[1] == 'gm':
-            globalmony()
+            globalmony() if len(sys.argv)<3 else globalmony(cid=sys.argv[2])
         if sys.argv[1] == 'ma':
             monyAll()
         if sys.argv[1] == 'cp':
-            completData()
+            completData() if len(sys.argv)<3 else completData(cid=sys.argv[2])
         if sys.argv[1] == 'put':
-            putlot()
+            putlot() if len(sys.argv)<3 else putlot(cid=sys.argv[2])
         if sys.argv[1] == 'putAll':
             putAll('2018-06-20')
         if sys.argv[1] == 'test':
             testHtml()
         if sys.argv[1] == 'ln':
-            listen()
+            listen() if len(sys.argv)<3 else listen(cid=sys.argv[2])
     else:
         print('启动定时任务！')
         sched.start() 
